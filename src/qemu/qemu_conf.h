@@ -104,6 +104,7 @@ struct _virQEMUDriverConfig {
     char *cacheDir;
     char *saveDir;
     char *snapshotDir;
+    char *vhostuserDir;
 
     bool vncAutoUnixSocket;
     bool vncTLS;

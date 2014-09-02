@@ -158,6 +158,9 @@ virQEMUDriverConfigPtr virQEMUDriverConfigNew(bool privileged)
         if (virAsprintf(&cfg->snapshotDir,
                         "%s/lib/libvirt/qemu/snapshot", LOCALSTATEDIR) < 0)
             goto error;
+        if (virAsprintf(&cfg->vhostuserDir,
+                        "%s/lib/libvirt/qemu/vhostuser", LOCALSTATEDIR) < 0)
+            goto error;
         if (virAsprintf(&cfg->autoDumpPath,
                         "%s/lib/libvirt/qemu/dump", LOCALSTATEDIR) < 0)
             goto error;
@@ -197,6 +200,8 @@ virQEMUDriverConfigPtr virQEMUDriverConfigNew(bool privileged)
         if (virAsprintf(&cfg->saveDir, "%s/qemu/save", cfg->configBaseDir) < 0)
             goto error;
         if (virAsprintf(&cfg->snapshotDir, "%s/qemu/snapshot", cfg->configBaseDir) < 0)
+            goto error;
+        if (virAsprintf(&cfg->vhostuserDir, "%s/qemu/vhostuser", cfg->configBaseDir) < 0)
             goto error;
         if (virAsprintf(&cfg->autoDumpPath, "%s/qemu/dump", cfg->configBaseDir) < 0)
             goto error;
@@ -280,6 +285,7 @@ static void virQEMUDriverConfigDispose(void *obj)
     VIR_FREE(cfg->cacheDir);
     VIR_FREE(cfg->saveDir);
     VIR_FREE(cfg->snapshotDir);
+    VIR_FREE(cfg->vhostuserDir);
 
     VIR_FREE(cfg->vncTLSx509certdir);
     VIR_FREE(cfg->vncListen);

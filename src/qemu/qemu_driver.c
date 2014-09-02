@@ -695,6 +695,11 @@ qemuStateInitialize(bool privileged,
                   cfg->snapshotDir, virStrerror(errno, ebuf, sizeof(ebuf)));
         goto error;
     }
+    if (virFileMakePath(cfg->vhostuserDir) < 0) {
+        VIR_ERROR(_("Failed to create vhost-user dir '%s': %s"),
+                  cfg->vhostuserDir, virStrerror(errno, ebuf, sizeof(ebuf)));
+        goto error;
+    }
     if (virFileMakePath(cfg->autoDumpPath) < 0) {
         VIR_ERROR(_("Failed to create dump dir '%s': %s"),
                   cfg->autoDumpPath, virStrerror(errno, ebuf, sizeof(ebuf)));
@@ -781,6 +786,13 @@ qemuStateInitialize(bool privileged,
             virReportSystemError(errno,
                                  _("unable to set ownership of '%s' to %d:%d"),
                                  cfg->snapshotDir, (int) cfg->user,
+                                 (int) cfg->group);
+            goto error;
+        }
+        if (chown(cfg->vhostuserDir, cfg->user, cfg->group) < 0) {
+            virReportSystemError(errno,
+                                 _("unable to set ownership of '%s' to %d:%d"),
+                                 cfg->vhostuserDir, (int) cfg->user,
                                  (int) cfg->group);
             goto error;
         }
