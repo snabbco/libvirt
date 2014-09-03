@@ -7538,30 +7538,6 @@ qemuBuildCommandLine(virConnectPtr conn,
     virCommandAddArg(cmd, "-m");
     def->mem.max_balloon = VIR_DIV_UP(def->mem.max_balloon, 1024) * 1024;
     virCommandAddArgFormat(cmd, "%llu", def->mem.max_balloon / 1024);
-    if (def->mem.nhugepages && !def->mem.hugepages[0].size) {
-        char *mem_path;
-
-        if (!cfg->nhugetlbfs) {
-            virReportError(VIR_ERR_INTERNAL_ERROR,
-                           "%s", _("hugetlbfs filesystem is not mounted "
-                                   "or disabled by administrator config"));
-            goto error;
-        }
-        if (!virQEMUCapsGet(qemuCaps, QEMU_CAPS_MEM_PATH)) {
-            virReportError(VIR_ERR_INTERNAL_ERROR,
-                           _("hugepage backing not supported by '%s'"),
-                           def->emulator);
-            goto error;
-        }
-
-        if (!(mem_path = qemuGetDefaultHugepath(cfg->hugetlbfs,
-                                                cfg->nhugetlbfs)))
-            goto error;
-
-        virCommandAddArgList(cmd, "-mem-prealloc", "-mem-path",
-                             mem_path, NULL);
-        VIR_FREE(mem_path);
-    }
 
     if (def->mem.locked && !virQEMUCapsGet(qemuCaps, QEMU_CAPS_MLOCK)) {
         virReportError(VIR_ERR_CONFIG_UNSUPPORTED, "%s",
@@ -7594,9 +7570,37 @@ qemuBuildCommandLine(virConnectPtr conn,
         }
     }
 
-    if (def->cpu && def->cpu->ncells)
+
+    if (def->cpu && def->cpu->ncells) {
         if (qemuBuildNumaArgStr(cfg, def, cmd, qemuCaps) < 0)
             goto error;
+    } else if (def->mem.nhugepages && !def->mem.hugepages[0].size) {
+        char *mem_path;
+
+        if (!cfg->nhugetlbfs) {
+            virReportError(VIR_ERR_INTERNAL_ERROR,
+                           "%s", _("hugetlbfs filesystem is not mounted "
+                                   "or disabled by administrator config"));
+            goto error;
+        }
+        if (!virQEMUCapsGet(qemuCaps, QEMU_CAPS_MEM_PATH)) {
+            virReportError(VIR_ERR_INTERNAL_ERROR,
+                           _("hugepage backing not supported by '%s'"),
+                           def->emulator);
+            goto error;
+        }
+
+        if (!(mem_path = qemuGetDefaultHugepath(cfg->hugetlbfs,
+                                                cfg->nhugetlbfs)))
+            goto error;
+
+        virCommandAddArg(cmd, "-object");
+        virCommandAddArgFormat(cmd,
+                               "memory-backend-file,id=ram-node,size=%dM,mem-path=%s,share=on",
+                               def->mem.max_balloon / 1024,mem_path);
+        virCommandAddArgList(cmd, "-numa", "node,memdev=ram-node", NULL);
+        VIR_FREE(mem_path);
+    }
 
     if (virQEMUCapsGet(qemuCaps, QEMU_CAPS_UUID))
         virCommandAddArgList(cmd, "-uuid", uuid, NULL);
